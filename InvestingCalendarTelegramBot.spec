@@ -1,14 +1,25 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
 block_cipher = None
+
+# Important for Playwright:
+# In GitHub Actions we install Chromium with PLAYWRIGHT_BROWSERS_PATH=0.
+# That places the browser under the playwright package directory.
+# collect_data_files("playwright") then bundles Playwright's driver + bundled Chromium
+# into the one-file EXE extraction directory, so the user does NOT need Python or
+# "playwright install" on their PC.
+playwright_datas = collect_data_files("playwright")
+playwright_hiddenimports = collect_submodules("playwright")
 
 
 a = Analysis(
     ['investing_calendar_telegram_bot.py'],
     pathex=[],
     binaries=[],
-    datas=[],
-    hiddenimports=['zoneinfo'],
+    datas=playwright_datas,
+    hiddenimports=playwright_hiddenimports + ['zoneinfo'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
