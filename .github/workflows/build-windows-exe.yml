@@ -1,0 +1,52 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+env:
+  # Required so Playwright downloads Chromium into the Python package folder.
+  # PyInstaller can then bundle it into the EXE.
+  PLAYWRIGHT_BROWSERS_PATH: "0"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies and bundled Chromium
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+          playwright install chromium
+
+      - name: Verify bundled Chromium location
+        shell: pwsh
+        run: |
+          python - <<'PY'
+          import pathlib, playwright
+          p = pathlib.Path(playwright.__file__).parent / 'driver' / 'package' / '.local-browsers'
+          print('Playwright bundled browser path:', p)
+          print('Exists:', p.exists())
+          if p.exists():
+              print([x.name for x in p.iterdir()])
+          PY
+
+      - name: Build EXE
+        run: |
+          pyinstaller --noconfirm InvestingCalendarTelegramBot.spec
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: InvestingCalendarTelegramBot-windows
+          path: dist/InvestingCalendarTelegramBot.exe
